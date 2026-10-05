@@ -1,10 +1,16 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
-import { FixedWindowModule } from './fixed_window/fixed_window.module.js';
+import { ConfigModule } from '@nestjs/config';
+import { RateLimiterModule } from './rate-limiter/rate-limiter.module.js';
+import { RedisModule } from './redis/redis.module.js';
 
 @Module({
-  imports: [FixedWindowModule],
+  imports: [
+    RateLimiterModule,
+    RedisModule,
+    ConfigModule.forRoot({ isGlobal: true }),
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
