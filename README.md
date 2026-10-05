@@ -1,114 +1,142 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+﻿# Rate Limiter
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A NestJS rate-limiting module backed by Redis. The current implementation supports a fixed-window algorithm and is designed to protect HTTP endpoints by tracking request counts per client key over a configured time window.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Current status
 
-## Description
+Only the fixed-window strategy has been implemented.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Supported algorithm:
+- `fixed-window`
 
-## Project setup
+Not implemented yet:
+- sliding window
+- token bucket
+- leaky bucket
+- other advanced rate-limit algorithms
+
+## Architecture
+
+The project includes:
+
+- a `@RateLimit()` decorator for endpoint-level configuration
+- a guard that enforces the limit before the request continues
+- a strategy registry that resolves the configured algorithm
+- a Redis-backed fixed-window implementation using a Lua script
+- client-key resolution by IP, user ID, or API key
+
+## Redis setup
+
+This project expects Redis to be available on the local machine by default:
+
+- host: `localhost`
+- port: `6379`
+
+You can override these values with environment variables:
 
 ```bash
-$ npm install
+REDIS_HOST=localhost
+REDIS_PORT=6379
 ```
 
-## Compile and run the project
+## Install
 
 ```bash
-# development
-$ npm run start
+npm install
+```
 
-# watch mode
-$ npm run start:dev
+## Run the app
 
-# production mode
-$ npm run start:prod
+```bash
+npm run start
+```
+
+For development mode:
+
+```bash
+npm run start:dev
 ```
 
 ## Run tests
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm run test
 ```
 
-## Deployment
+## Fixed-window behavior
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+The fixed-window strategy uses a Redis key per client and per time bucket:
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+```ts
+const window = Math.floor(Date.now() / config.windowMs);
+const redisKey = `rate-limit:${key}:${window}`;
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Each request increments the counter in Redis. The counter resets when the time bucket changes. The Lua script used for this is located in:
 
-## Observability
+- `src/rate-limiter/scripts/fixed-window.lua`
 
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
+It performs an atomic `INCR` and sets the TTL only on the first request in the bucket.
 
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
+## Endpoint usage
 
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
+```ts
+import { Controller, Get, UseGuards } from '@nestjs/common';
+import { RateLimitGuard } from './rate-limiter/guard/rate-limit.guard.js';
+import { RateLimit } from './rate-limiter/decorators/rate-limit.decorator.js';
 
-## Resources
+@Controller()
+@UseGuards(RateLimitGuard)
+export class AppController {
+  @Get('test')
+  @RateLimit({
+    algorithm: 'fixed-window',
+    limit: 5,
+    windowMs: 60_000,
+    keyType: 'ip',
+    failureMode: 'open',
+  })
+  test() {
+    return { message: 'Request Allowed' };
+  }
+}
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+### Supported key types
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observer](https://observer.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+```ts
+keyType: 'ip' | 'user' | 'api-key'
+```
 
-## Support
+- `ip`: rate limits by request IP
+- `user`: rate limits by authenticated user ID when available, otherwise falls back to IP
+- `api-key`: rate limits by `x-api-key` header when present, otherwise falls back to IP
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## Response handling
 
-## Stay in touch
+When a request exceeds the configured limit, the guard responds with `429 Too Many Requests` and adds headers such as:
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+- `X-RateLimit-Limit`
+- `X-RateLimit-Remaining`
+- `X-RateLimit-Reset`
+- `Retry-After`
 
-## License
+The response body includes the retry window in milliseconds:
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+```json
+{
+  "message": "Too many requests",
+  "retryAfterMs": 15000
+}
+```
+
+## Failure mode
+
+The `failureMode` option is supported but optional.
+
+- `open`: when Redis is unavailable, requests are allowed
+- `closed`: when Redis is unavailable, the service throws a `503 Service Unavailable`
+
+## Notes
+
+This repository is a focused implementation of a Redis-backed rate limiter for fixed windows. It is intentionally limited to the `fixed-window` algorithm until additional strategies are added.
