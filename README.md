@@ -9,10 +9,11 @@ Only the fixed-window strategy has been implemented.
 Supported algorithm:
 
 - `fixed-window`
-- `sliding window`
+- `sliding window log`
 
 Not implemented yet:
 
+- sliding window counter
 - token bucket
 - leaky bucket
 - other advanced rate-limit algorithms
