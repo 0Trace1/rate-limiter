@@ -6,7 +6,7 @@ A NestJS rate-limiting module backed by Redis. The current implementation suppor
 
 Only the fixed-window strategy has been implemented.
 
-Supported algorithm:
+Supported algorithms:
 
 - `fixed-window`
 - `sliding window log`
@@ -140,6 +140,3 @@ The `failureMode` option is supported but optional.
 - `open`: when Redis is unavailable, requests are allowed
 - `closed`: when Redis is unavailable, the service throws a `503 Service Unavailable`
 
-## Notes
-
-This repository is a focused implementation of a Redis-backed rate limiter for fixed windows. It is intentionally limited to the `fixed-window` algorithm until additional strategies are added.
