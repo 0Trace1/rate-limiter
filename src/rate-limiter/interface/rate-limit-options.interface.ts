@@ -1,4 +1,4 @@
-export type RateLimitAlgorithm = 'fixed-window';
+export type RateLimitAlgorithm = 'fixed-window' | 'sliding-log';
 
 export type RateLimitKeyType = 'ip' | 'user' | 'api-key';
 

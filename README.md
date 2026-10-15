@@ -7,10 +7,13 @@ A NestJS rate-limiting module backed by Redis. The current implementation suppor
 Only the fixed-window strategy has been implemented.
 
 Supported algorithm:
+
 - `fixed-window`
+- `sliding window log`
 
 Not implemented yet:
-- sliding window
+
+- sliding window counter
 - token bucket
 - leaky bucket
 - other advanced rate-limit algorithms
@@ -105,7 +108,7 @@ export class AppController {
 ### Supported key types
 
 ```ts
-keyType: 'ip' | 'user' | 'api-key'
+keyType: 'ip' | 'user' | 'api-key';
 ```
 
 - `ip`: rate limits by request IP
