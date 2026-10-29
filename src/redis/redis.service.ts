@@ -40,6 +40,16 @@ export class RedisService implements OnModuleDestroy {
       lua: slidingLogScript,
     });
 
+    const slidingCounterScript = readFileSync(
+      join(__dirname, '../rate-limiter/scripts/sliding-counter.lua'),
+      'utf8',
+    );
+
+    redis.defineCommand('slidingCounter', {
+      numberOfKeys: 2,
+      lua: slidingCounterScript,
+    });
+
     this.redis = redis as RedisWithRateLimitCommands;
   }
 
