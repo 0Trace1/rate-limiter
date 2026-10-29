@@ -19,7 +19,7 @@ export class AppController {
 
   @Get('test')
   @RateLimit({
-    algorithm: 'sliding-log',
+    algorithm: 'sliding-counter',
     limit: 5,
     windowMs: 60_000,
     keyType: 'ip',

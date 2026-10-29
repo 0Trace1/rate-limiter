@@ -10,10 +10,10 @@ Supported algorithms:
 
 - `fixed-window`
 - `sliding window log`
+- `sliding window counter`
 
 Not implemented yet:
 
-- sliding window counter
 - token bucket
 - leaky bucket
 - other advanced rate-limit algorithms
@@ -139,4 +139,3 @@ The `failureMode` option is supported but optional.
 
 - `open`: when Redis is unavailable, requests are allowed
 - `closed`: when Redis is unavailable, the service throws a `503 Service Unavailable`
-

@@ -4,6 +4,7 @@ import {
   FixedWindowStrategy,
   SlidingLogStrategy,
 } from '../strategies/index.js';
+import { SlidingCounterStrategy } from '../strategies/sliding-counter.strategy.js';
 
 @Injectable()
 export class RateLimiterService {
@@ -12,10 +13,12 @@ export class RateLimiterService {
   constructor(
     private readonly fixedWindow: FixedWindowStrategy,
     private readonly slidingLog: SlidingLogStrategy,
+    private readonly slidingCounter: SlidingCounterStrategy,
   ) {
     this.strategies = new Map<string, RateLimiterStrategy>([
       ['fixed-window', this.fixedWindow],
       ['sliding-log', this.slidingLog],
+      ['sliding-counter', this.slidingCounter],
     ]);
   }
 
