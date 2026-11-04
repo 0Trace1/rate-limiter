@@ -1,6 +1,6 @@
 ﻿# Rate Limiter
 
-A NestJS rate-limiting module backed by Redis. The current implementation supports a fixed-window algorithm and is designed to protect HTTP endpoints by tracking request counts per client key over a configured time window.
+A NestJS rate-limiting module backed by Redis. The current implementation supports a fixed-window,sliding window log and sliding window counter algorithms and is designed to protect HTTP endpoints by tracking request counts per client key over a configured time window.
 
 ## Current status
 
