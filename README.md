@@ -4,8 +4,6 @@ A NestJS rate-limiting module backed by Redis. The current implementation suppor
 
 ## Current status
 
-Only the fixed-window strategy has been implemented.
-
 Supported algorithms:
 
 - `fixed-window`
